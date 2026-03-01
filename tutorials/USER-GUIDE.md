@@ -87,7 +87,6 @@ If you want to delete, translate, or add any entries before generating the final
 
 We have prepared short videos (under 2 minutes) for each step:
 
-* 🎥 **[Tutorial 1] How to properly export your Lattes XML.** *(Insert video link)*
-* 🎥 **[Tutorial 2] How to install Anaconda and open the Converter.** *(Insert video link)*
-* 🎥 **[Tutorial 3] How to run the code and generate your first PDF.** *(Insert video link)*
-* 🎥 **[Tutorial 4] How to use the Interactive Editor to translate or alter data.** *(Insert video link)*
+* 🎥 **[Tutorial 1] How to properly export your Lattes XML.** (*https://youtu.be/Ke9J9Lqjh7s*)
+* 🎥 **[Tutorial 2] How to install Anaconda and open the Converter.** (*https://youtu.be/P_ilBAbE_vY*)
+* 🎥 **[Tutorial 3] How to run the code and generate your first PDF.** (*https://youtu.be/UkpCvdUyrF8*)

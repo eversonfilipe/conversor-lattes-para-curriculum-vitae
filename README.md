@@ -1,3 +1,9 @@
+> **Lattes XML to Curriculum Vitae PDF Converter** is a self-contained Python architecture designed to parse, deduplicate, and render CNPq Lattes profiles into professional, international-standard PDF resumes. 
+>
+> Built without external APIs to guarantee data privacy, this tool features automated ISO-8859-1/UTF-8 resolution, semantic data extraction across 10 hierarchical sections, and an interactive CRUD editor. Engineered by **Éverson Filipe**, it demonstrates applied principles of Config-as-Data Reliability, utilizing `xml.etree.ElementTree` for robust ETL and `reportlab` for advanced Unicode typographic rendering.
+>
+> _Made using Antigravity IDE for coding and Draw.io for design._
+
 # Lattes XML to Curriculum Vitae PDF Converter
 
 A Jupyter Notebook script that converts a Lattes CV export (ZIP archive containing an XML file) into a professional, machine-readable and human-readable PDF curriculum vitae, formatted for academic and international use.

@@ -193,7 +193,8 @@ conversor-lattes-para-curriculum-vitae/
 ├── patch_notebook.py           Utility script for patching notebook cells
 ├── requirements.txt            Python dependency list
 ├── .gitignore                  Git ignore rules
-└── README.md                   This file
+├── README.md                   This file
+└── tutorials/USER-GUIDE.md     Guidance for non-technical users
 ```
 
 ---

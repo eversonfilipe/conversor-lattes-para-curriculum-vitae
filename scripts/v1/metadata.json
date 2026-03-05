@@ -1,0 +1,66 @@
+{
+  "script": "lattes_para_pdf.py",
+  "version": "1.0.0",
+  "created_at": "2026-03-05",
+  "last_modified_at": "2026-03-05",
+  "author": "conversor-lattes-para-curriculum-vitae",
+  "description": "Converts a Lattes CV export (ZIP containing XML) into a professional PDF curriculum vitae. Terminal-based refactor of lattes_para_pdf.ipynb (root). No Jupyter kernel or widget dependencies required.",
+  "language": "python",
+  "entry_point": "lattes_para_pdf.py",
+  "runtime": "python>=3.9",
+  "dependencies": {
+    "runtime": [
+      "reportlab>=4.0.0",
+      "tqdm>=4.65.0"
+    ],
+    "stdlib": [
+      "argparse",
+      "os",
+      "pathlib",
+      "re",
+      "subprocess",
+      "sys",
+      "zipfile",
+      "xml.etree.ElementTree",
+      "html"
+    ]
+  },
+  "usage": {
+    "basic": "python lattes_para_pdf.py <ZIP_FILE>",
+    "with_output": "python lattes_para_pdf.py <ZIP_FILE> --output <OUTPUT_PDF>",
+    "auto_detect": "python lattes_para_pdf.py",
+    "skip_deps": "python lattes_para_pdf.py <ZIP_FILE> --skip-deps"
+  },
+  "exit_codes": {
+    "0": "Success",
+    "1": "User / argument error",
+    "2": "File or environment error",
+    "3": "PDF generation error"
+  },
+  "sections_extracted": [
+    "Personal data",
+    "Academic background",
+    "Professional experience",
+    "Internships",
+    "Research activities",
+    "Publications",
+    "Areas of expertise",
+    "Languages",
+    "Awards",
+    "Events"
+  ],
+  "source_notebook": "../../lattes_para_pdf.ipynb",
+  "changelog": [
+    {
+      "version": "1.0.0",
+      "date": "2026-03-05",
+      "notes": "Initial release. Full refactor of root-level notebook into a standalone terminal script. ipywidgets interactive editor intentionally excluded (terminal environment). All extraction, PDF rendering, and font registration logic preserved and restructured under Clean Code principles."
+    }
+  ],
+  "known_limitations": [
+    "Interactive CV editor (Block 5 of the notebook) is not available in terminal mode.",
+    "Times New Roman TTF font registration is Windows-specific. Falls back to built-in ReportLab fonts on other operating systems.",
+    "Designed for the Lattes XML schema. Other XML schemas are not supported."
+  ],
+  "test_file": "../test_suite.ipynb"
+}

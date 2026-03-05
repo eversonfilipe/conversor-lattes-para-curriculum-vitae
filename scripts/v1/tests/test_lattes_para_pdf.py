@@ -2,13 +2,6 @@
 tests/test_lattes_para_pdf.py
 =============================
 Functional tests for scripts/v1/lattes_para_pdf.py.
-
-All tests exercise real logic — no mocks, no patching.
-The test fixture is the ZIP file located in the project root
-(auto-detected by _find_fixture_zip).
-
-Running
--------
     cd scripts/v1
     pytest tests/ -v --tb=short
 

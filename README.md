@@ -189,12 +189,24 @@ The generated PDF contains the following sections, in order:
 
 ```
 conversor-lattes-para-curriculum-vitae/
-├── lattes_para_pdf.ipynb       Main conversion notebook
-├── patch_notebook.py           Utility script for patching notebook cells
-├── requirements.txt            Python dependency list
-├── .gitignore                  Git ignore rules
-├── README.md                   This file
-└── tutorials/USER-GUIDE.md     Guidance for non-technical users
+├── lattes_para_pdf.ipynb           Main conversion notebook
+├── patch_notebook.py               Utility script for patching notebook cells
+├── requirements.txt                Python dependency list
+├── .gitignore                      Git ignore rules
+├── README.md                       This file
+├── tutorials/
+│   └── USER-GUIDE.md               Guidance for non-technical users
+└── scripts/                        Versioned standalone implementations
+    ├── README.md                   Architecture and versioning documentation
+    ├── test_suite.ipynb            Cross-version metadata inspector and pytest orchestrator
+    ├── v1/                         Version 1 — terminal-based refactor of the root notebook
+    │   ├── lattes_para_pdf.py      Standalone CLI script (no Jupyter / ipywidgets dependency)
+    │   ├── metadata.json           Version descriptor (schema, changelog, limitations, usage)
+    │   └── tests/
+    │       └── test_lattes_para_pdf.py   45 functional pytest tests
+    ├── v2/                         Reserved for future versions
+    ├── v3/                         Reserved for future versions
+    └── v4/                         Reserved for future versions
 ```
 
 ---

@@ -1,0 +1,28 @@
+services:
+  lattes-converter:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    image: lattes-converter:latest
+
+    # Privacy boundary: ./data is the exclusive I/O surface.
+    # The user places CV_ID.zip here; the generated PDF is written here.
+    # Nothing else from the host filesystem is visible inside the container.
+    volumes:
+      - ./data:/app/data
+
+    # Working directory must be /app so the script's auto-detect logic
+    # (glob("*.zip")) scans /app/data correctly when invoked without args.
+    # Override with `docker compose run lattes-converter CV_ID.zip`
+    # to pass an explicit filename.
+    working_dir: /app/data
+
+    # Explicit env propagation keeps the Dockerfile free of hardcoded values;
+    # CI/CD can override FONT_DIR for non-standard font installations.
+    environment:
+      FONT_DIR: /usr/share/fonts/truetype/msttcorefonts
+
+    # --skip-deps: pip install already ran at image build time; re-running it
+    # at container start wastes seconds on every invocation.
+    command: ["--skip-deps"]

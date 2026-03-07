@@ -641,25 +641,77 @@ def _print_extraction_summary(data: dict) -> None:
 def _register_fonts() -> tuple[str, str, str]:
     """
     Register Times New Roman TTF variants for full Unicode support.
-    Falls back to built-in ReportLab fonts on non-Windows systems.
-    Returns (font_body, font_bold, font_italic).
+
+    Font path resolution strategy (Config-as-Data — evaluated in order):
+      1. FONT_DIR env var  — set by Dockerfile/CI for non-standard layouts.
+      2. Linux msttcorefonts  — installed by ttf-mscorefonts-installer.
+      3. Windows system fonts — developer workstations.
+
+    Each candidate directory carries its own filename map because the
+    MS font installer uses different names on each platform
+    (e.g. ``times.ttf`` on Windows vs ``Times_New_Roman.ttf`` on Linux).
     """
     from reportlab.pdfbase import pdfmetrics
     from reportlab.pdfbase.ttfonts import TTFont
     from reportlab.pdfbase.pdfmetrics import registerFontFamily
 
-    ttf_map = {
-        "TNR"          : "C:/Windows/Fonts/times.ttf",
-        "TNR-Bold"     : "C:/Windows/Fonts/timesbd.ttf",
-        "TNR-Italic"   : "C:/Windows/Fonts/timesi.ttf",
-        "TNR-BoldItalic": "C:/Windows/Fonts/timesbi.ttf",
-    }
+    # (directory, {alias: filename}) pairs — probed in priority order.
+    _FONT_SEARCH = [
+        # 1. Explicit override via env var (Docker FONT_DIR, CI matrices, etc.)
+        (
+            os.environ.get("FONT_DIR", ""),
+            {
+                "TNR"          : "Times_New_Roman.ttf",
+                "TNR-Bold"     : "Times_New_Roman_Bold.ttf",
+                "TNR-Italic"   : "Times_New_Roman_Italic.ttf",
+                "TNR-BoldItalic": "Times_New_Roman_Bold_Italic.ttf",
+            },
+        ),
+        # 2. Linux — ttf-mscorefonts-installer default location.
+        (
+            "/usr/share/fonts/truetype/msttcorefonts",
+            {
+                "TNR"          : "Times_New_Roman.ttf",
+                "TNR-Bold"     : "Times_New_Roman_Bold.ttf",
+                "TNR-Italic"   : "Times_New_Roman_Italic.ttf",
+                "TNR-BoldItalic": "Times_New_Roman_Bold_Italic.ttf",
+            },
+        ),
+        # 3. Windows — system font directory, original filenames.
+        (
+            "C:/Windows/Fonts",
+            {
+                "TNR"          : "times.ttf",
+                "TNR-Bold"     : "timesbd.ttf",
+                "TNR-Italic"   : "timesi.ttf",
+                "TNR-BoldItalic": "timesbi.ttf",
+            },
+        ),
+    ]
+
+    def _resolve_map(directory: str, name_map: dict) -> dict:
+        """Return {alias: absolute_path} for every font file that exists."""
+        if not directory or not os.path.isdir(directory):
+            return {}
+        resolved = {}
+        for alias, filename in name_map.items():
+            path = os.path.join(directory, filename)
+            if os.path.exists(path):
+                resolved[alias] = path
+        return resolved
+
+    # Pick the first candidate directory that has at least 2 of the 4 fonts.
+    ttf_map: dict = {}
+    for font_dir, name_map in _FONT_SEARCH:
+        candidate = _resolve_map(font_dir, name_map)
+        if len(candidate) >= 2:
+            ttf_map = candidate
+            break
 
     n_reg = 0
     for alias, path in ttf_map.items():
-        if os.path.exists(path):
-            pdfmetrics.registerFont(TTFont(alias, path))
-            n_reg += 1
+        pdfmetrics.registerFont(TTFont(alias, path))
+        n_reg += 1
 
     if n_reg >= 2:
         registerFontFamily(
@@ -672,8 +724,9 @@ def _register_fonts() -> tuple[str, str, str]:
         print(f"  Font: Times New Roman TTF registered ({n_reg} variants)")
         return "TNR", "TNR-Bold", "TNR-Italic"
 
-    print("  Font: Windows TTF not found — using built-in ReportLab fonts")
+    print("  Font: Times New Roman not found — using built-in ReportLab fonts")
     return "Times-Roman", "Times-Bold", "Times-Italic"
+
 
 
 # ---------------------------------------------------------------------------

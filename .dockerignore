@@ -1,0 +1,57 @@
+.git/
+.gitignore
+
+CV_*.zip
+*_cv.pdf
+data/
+
+# ── Environment secrets ───────────────────────────────────────────────────────
+.env
+.env.*
+*.env
+
+# ── Python artefacts ──────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# ── Virtual environments ──────────────────────────────────────────────────────
+# These replicate the system Python; all dependencies are installed inside
+# the image via pip, making local virtualenvs irrelevant and potentially
+# conflicting (different Python version, OS-specific compiled wheels).
+.venv/
+venv/
+env/
+.env/
+
+# ── Test artefacts ────────────────────────────────────────────────────────────
+# Test output files have no role inside the runtime image.
+.pytest_cache/
+.coverage
+htmlcov/
+*.xml
+
+# ── Jupyter notebooks ─────────────────────────────────────────────────────────
+# The production entrypoint is scripts/v1/lattes_para_pdf.py (CLI).
+# Notebooks carry cell outputs that may contain personal data (printed names,
+# file paths, Lattes IDs) from previous interactive runs.
+*.ipynb
+
+# ── Tooling and IDE ───────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ── Documentation ─────────────────────────────────────────────────────────────
+# README and docs add zero value to the runtime image.
+README.md
+docs/
+tutorials/
+
+# ── Patch scripts ─────────────────────────────────────────────────────────────
+patch_notebook.py

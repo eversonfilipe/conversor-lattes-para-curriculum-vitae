@@ -407,6 +407,283 @@ class TestGeneratePdf:
 
 
 # ---------------------------------------------------------------------------
+# Section 7: New extraction functions (v1.1.0)
+# ---------------------------------------------------------------------------
+
+class TestExtractComplementaryFormation:
+    def test_empty_when_no_section(self):
+        root = ET.fromstring("<CURRICULO-VITAE />")
+        assert _mod.extract_complementary_formation(root) == []
+
+    def test_short_course_extracted(self):
+        raw = b"""
+        <CURRICULO-VITAE>
+          <DADOS-COMPLEMENTARES>
+            <FORMACAO-COMPLEMENTAR>
+              <FORMACAO-COMPLEMENTAR-CURSO-DE-CURTA-DURACAO
+                NOME-CURSO-CURTA-DURACAO="Python for Data Science"
+                NOME-INSTITUICAO="Coursera"
+                CARGA-HORARIA="40"
+                ANO-DE-INICIO="2022"
+                ANO-DE-CONCLUSAO="2022"
+                STATUS-DO-CURSO="CONCLUIDO" />
+            </FORMACAO-COMPLEMENTAR>
+          </DADOS-COMPLEMENTARES>
+        </CURRICULO-VITAE>
+        """
+        root = ET.fromstring(raw)
+        result = _mod.extract_complementary_formation(root)
+        assert len(result) == 1
+        assert result[0]["kind"] == "Short Course"
+        assert result[0]["name"] == "Python for Data Science"
+        assert result[0]["institution"] == "Coursera"
+        assert result[0]["workload"] == "40"
+        assert result[0]["end"] == "2022"
+
+    def test_extension_course_extracted(self):
+        raw = b"""
+        <CURRICULO-VITAE>
+          <DADOS-COMPLEMENTARES>
+            <FORMACAO-COMPLEMENTAR>
+              <FORMACAO-COMPLEMENTAR-DE-EXTENSAO-UNIVERSITARIA
+                NOME-CURSO-EXTENSAO-UNIVERSITARIA="Machine Learning Extension"
+                NOME-INSTITUICAO="UFPE"
+                CARGA-HORARIA="60"
+                ANO-DE-INICIO="2021"
+                ANO-DE-CONCLUSAO="2021"
+                STATUS-DO-CURSO="CONCLUIDO" />
+            </FORMACAO-COMPLEMENTAR>
+          </DADOS-COMPLEMENTARES>
+        </CURRICULO-VITAE>
+        """
+        root = ET.fromstring(raw)
+        result = _mod.extract_complementary_formation(root)
+        assert len(result) == 1
+        assert result[0]["kind"] == "University Extension"
+        assert result[0]["name"] == "Machine Learning Extension"
+
+    def test_both_types_combined_and_sorted(self):
+        raw = b"""
+        <CURRICULO-VITAE>
+          <DADOS-COMPLEMENTARES>
+            <FORMACAO-COMPLEMENTAR>
+              <FORMACAO-COMPLEMENTAR-CURSO-DE-CURTA-DURACAO
+                NOME-CURSO-CURTA-DURACAO="Old Course"
+                NOME-INSTITUICAO="X"
+                CARGA-HORARIA="10"
+                ANO-DE-INICIO="2019"
+                ANO-DE-CONCLUSAO="2019"
+                STATUS-DO-CURSO="CONCLUIDO" />
+              <FORMACAO-COMPLEMENTAR-DE-EXTENSAO-UNIVERSITARIA
+                NOME-CURSO-EXTENSAO-UNIVERSITARIA="New Extension"
+                NOME-INSTITUICAO="Y"
+                CARGA-HORARIA="80"
+                ANO-DE-INICIO="2023"
+                ANO-DE-CONCLUSAO="2023"
+                STATUS-DO-CURSO="CONCLUIDO" />
+            </FORMACAO-COMPLEMENTAR>
+          </DADOS-COMPLEMENTARES>
+        </CURRICULO-VITAE>
+        """
+        root = ET.fromstring(raw)
+        result = _mod.extract_complementary_formation(root)
+        assert len(result) == 2
+        # Sorted descending by end year — newest first.
+        assert result[0]["end"] == "2023"
+        assert result[1]["end"] == "2019"
+
+
+class TestExtractWorkPresentations:
+    def test_empty_when_no_presentations(self):
+        root = ET.fromstring("<CURRICULO-VITAE />")
+        assert _mod.extract_work_presentations(root) == []
+
+    def test_presentation_fields_extracted(self):
+        raw = b"""
+        <CURRICULO-VITAE>
+          <PARTICIPACAO-EM-EVENTOS-CONGRESSOS>
+            <PARTICIPACAO-EM-CONGRESSO>
+              <DADOS-BASICOS-DA-PARTICIPACAO-EM-CONGRESSO
+                TITULO="My Congress"
+                ANO="2023"
+                PAIS-DO-EVENTO="Brasil" />
+              <APRESENTACAO-DE-TRABALHO>
+                <DADOS-BASICOS-DA-APRESENTACAO-DE-TRABALHO
+                  TITULO="AI in Healthcare"
+                  ANO="2023"
+                  NATUREZA="APRESENTACAO_ORAL"
+                  PAIS-DO-EVENTO="Brasil" />
+                <DETALHAMENTO-DA-APRESENTACAO-DE-TRABALHO
+                  NOME-DO-EVENTO="International Health Summit"
+                  CIDADE-DO-EVENTO="Recife" />
+              </APRESENTACAO-DE-TRABALHO>
+            </PARTICIPACAO-EM-CONGRESSO>
+          </PARTICIPACAO-EM-EVENTOS-CONGRESSOS>
+        </CURRICULO-VITAE>
+        """
+        root = ET.fromstring(raw)
+        result = _mod.extract_work_presentations(root)
+        assert len(result) == 1
+        p = result[0]
+        assert p["title"] == "AI in Healthcare"
+        assert p["year"] == "2023"
+        assert p["nature"] == "Apresentacao oral"
+        assert p["event"] == "International Health Summit"
+        assert p["city"] == "Recife"
+        assert p["country"] == "Brasil"
+
+    def test_deduplication_by_title_and_year(self):
+        raw = b"""
+        <CURRICULO-VITAE>
+          <APRESENTACAO-DE-TRABALHO>
+            <DADOS-BASICOS-DA-APRESENTACAO-DE-TRABALHO
+              TITULO="Dup Work" ANO="2022" NATUREZA="" PAIS-DO-EVENTO="" />
+          </APRESENTACAO-DE-TRABALHO>
+          <APRESENTACAO-DE-TRABALHO>
+            <DADOS-BASICOS-DA-APRESENTACAO-DE-TRABALHO
+              TITULO="Dup Work" ANO="2022" NATUREZA="" PAIS-DO-EVENTO="" />
+          </APRESENTACAO-DE-TRABALHO>
+        </CURRICULO-VITAE>
+        """
+        root = ET.fromstring(raw)
+        result = _mod.extract_work_presentations(root)
+        assert len(result) == 1
+
+    def test_no_dados_basicos_skipped(self):
+        raw = b"""
+        <CURRICULO-VITAE>
+          <APRESENTACAO-DE-TRABALHO>
+            <DETALHAMENTO-DA-APRESENTACAO-DE-TRABALHO
+              NOME-DO-EVENTO="Event" CIDADE-DO-EVENTO="City" />
+          </APRESENTACAO-DE-TRABALHO>
+        </CURRICULO-VITAE>
+        """
+        root = ET.fromstring(raw)
+        result = _mod.extract_work_presentations(root)
+        assert result == []
+
+
+class TestExtractAdditionalCourses:
+    def test_empty_when_no_elements(self):
+        root = ET.fromstring("<CURRICULO-VITAE />")
+        assert _mod.extract_additional_courses(root) == []
+
+    def test_course_fields_extracted(self):
+        raw = b"""
+        <CURRICULO-VITAE>
+          <FORMACAO-ACADEMICA-TITULACAO>
+            <GRADUACAO NOME-CURSO="CS" NOME-INSTITUICAO="Uni">
+              <INFORMACOES-ADICIONAIS-CURSOS>
+                <INFORMACOES-ADICIONAIS-CURSO
+                  NOME-DISCIPLINA="Algorithms"
+                  ANO="2012"
+                  SEMESTRE="1"
+                  SITUACAO="APROVADO"
+                  CARGA-HORARIA-TEORICA="60"
+                  CARGA-HORARIA-PRATICA="20" />
+              </INFORMACOES-ADICIONAIS-CURSOS>
+            </GRADUACAO>
+          </FORMACAO-ACADEMICA-TITULACAO>
+        </CURRICULO-VITAE>
+        """
+        root = ET.fromstring(raw)
+        result = _mod.extract_additional_courses(root)
+        assert len(result) == 1
+        c = result[0]
+        assert c["name"] == "Algorithms"
+        assert c["year"] == "2012"
+        assert c["semester"] == "1"
+        assert c["status"] == "Aprovado"
+        assert "60h theory" in c["workload"]
+        assert "20h practice" in c["workload"]
+
+    def test_deduplication_by_name_year_semester(self):
+        raw = b"""
+        <CURRICULO-VITAE>
+          <INFORMACOES-ADICIONAIS-CURSO
+            NOME-DISCIPLINA="Math" ANO="2011" SEMESTRE="2"
+            SITUACAO="APROVADO" CARGA-HORARIA-TEORICA="40" CARGA-HORARIA-PRATICA="" />
+          <INFORMACOES-ADICIONAIS-CURSO
+            NOME-DISCIPLINA="Math" ANO="2011" SEMESTRE="2"
+            SITUACAO="APROVADO" CARGA-HORARIA-TEORICA="40" CARGA-HORARIA-PRATICA="" />
+        </CURRICULO-VITAE>
+        """
+        root = ET.fromstring(raw)
+        result = _mod.extract_additional_courses(root)
+        assert len(result) == 1
+
+    def test_workload_theory_only(self):
+        raw = b"""
+        <CURRICULO-VITAE>
+          <INFORMACOES-ADICIONAIS-CURSO
+            NOME-DISCIPLINA="Ethics" ANO="2013" SEMESTRE=""
+            SITUACAO="" CARGA-HORARIA-TEORICA="30" CARGA-HORARIA-PRATICA="" />
+        </CURRICULO-VITAE>
+        """
+        root = ET.fromstring(raw)
+        result = _mod.extract_additional_courses(root)
+        assert result[0]["workload"] == "30"
+
+
+class TestExtractAdditionalInstitutions:
+    def test_empty_when_no_elements(self):
+        root = ET.fromstring("<CURRICULO-VITAE />")
+        assert _mod.extract_additional_institutions(root) == []
+
+    def test_institution_fields_extracted(self):
+        raw = b"""
+        <CURRICULO-VITAE>
+          <ATUACOES-PROFISSIONAIS>
+            <ATUACAO-PROFISSIONAL NOME-INSTITUICAO="Org X">
+              <INFORMACOES-ADICIONAIS-INSTITUICOES>
+                <INFORMACOES-ADICIONAIS-INSTITUICAO
+                  NOME-INSTITUICAO="Federal University Z"
+                  PAIS-INSTITUICAO="Brasil"
+                  UF-INSTITUICAO="PE"
+                  NOME-ORGAO="Computer Science Dept" />
+              </INFORMACOES-ADICIONAIS-INSTITUICOES>
+            </ATUACAO-PROFISSIONAL>
+          </ATUACOES-PROFISSIONAIS>
+        </CURRICULO-VITAE>
+        """
+        root = ET.fromstring(raw)
+        result = _mod.extract_additional_institutions(root)
+        assert len(result) == 1
+        i = result[0]
+        assert i["institution"] == "Federal University Z"
+        assert i["country"] == "Brasil"
+        assert i["state"] == "PE"
+        assert i["department"] == "Computer Science Dept"
+
+    def test_empty_name_skipped(self):
+        raw = b"""
+        <CURRICULO-VITAE>
+          <INFORMACOES-ADICIONAIS-INSTITUICAO
+            NOME-INSTITUICAO=""
+            PAIS-INSTITUICAO="Brasil"
+            UF-INSTITUICAO="SP"
+            NOME-ORGAO="Some Dept" />
+        </CURRICULO-VITAE>
+        """
+        root = ET.fromstring(raw)
+        result = _mod.extract_additional_institutions(root)
+        assert result == []
+
+    def test_deduplication_by_name_and_org(self):
+        raw = b"""
+        <CURRICULO-VITAE>
+          <INFORMACOES-ADICIONAIS-INSTITUICAO
+            NOME-INSTITUICAO="Uni A" PAIS-INSTITUICAO="BR" UF-INSTITUICAO="PE" NOME-ORGAO="Dept X" />
+          <INFORMACOES-ADICIONAIS-INSTITUICAO
+            NOME-INSTITUICAO="Uni A" PAIS-INSTITUICAO="BR" UF-INSTITUICAO="PE" NOME-ORGAO="Dept X" />
+        </CURRICULO-VITAE>
+        """
+        root = ET.fromstring(raw)
+        result = _mod.extract_additional_institutions(root)
+        assert len(result) == 1
+
+
+# ---------------------------------------------------------------------------
 # Section 6: Integration — fixture ZIP from project root (optional)
 # ---------------------------------------------------------------------------
 

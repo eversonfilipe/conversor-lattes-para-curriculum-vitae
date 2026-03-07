@@ -1,8 +1,8 @@
 {
   "script": "lattes_para_pdf.py",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "created_at": "2026-03-05",
-  "last_modified_at": "2026-03-05",
+  "last_modified_at": "2026-03-07",
   "author": "conversor-lattes-para-curriculum-vitae",
   "description": "Converts a Lattes CV export (ZIP containing XML) into a professional PDF curriculum vitae. Terminal-based refactor of lattes_para_pdf.ipynb (root). No Jupyter kernel or widget dependencies required.",
   "language": "python",
@@ -47,10 +47,19 @@
     "Areas of expertise",
     "Languages",
     "Awards",
-    "Events"
+    "Events",
+    "Complementary formation (short courses + university extension)",
+    "Work presentations (APRESENTACAO-DE-TRABALHO)",
+    "Additional courses / coursework details (INFORMACOES-ADICIONAIS-CURSO)",
+    "Additional institutional references (INFORMACOES-ADICIONAIS-INSTITUICAO)"
   ],
   "source_notebook": "../../lattes_para_pdf.ipynb",
   "changelog": [
+    {
+      "version": "1.1.0",
+      "date": "2026-03-07",
+      "notes": "Added 4 new extraction sections: Complementary Formation (FORMACAO-COMPLEMENTAR-CURSO-DE-CURTA-DURACAO + FORMACAO-COMPLEMENTAR-DE-EXTENSAO-UNIVERSITARIA), Work Presentations (APRESENTACAO-DE-TRABALHO / DADOS-BASICOS-DA-APRESENTACAO-DE-TRABALHO), Additional Courses (INFORMACOES-ADICIONAIS-CURSO / INFORMACOES-ADICIONAIS-CURSOS), Additional Institutions (INFORMACOES-ADICIONAIS-INSTITUICAO / INFORMACOES-ADICIONAIS-INSTITUICOES). All follow the same pure-function + deduplication pattern established in v1.0.0."
+    },
     {
       "version": "1.0.0",
       "date": "2026-03-05",

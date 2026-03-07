@@ -442,21 +442,175 @@ def extract_events(root: ET.Element) -> list:
     return items
 
 
+def extract_complementary_formation(root: ET.Element) -> list:
+    """
+    Extracts short-duration courses (FORMACAO-COMPLEMENTAR-CURSO-DE-CURTA-DURACAO)
+    and university extension courses (FORMACAO-COMPLEMENTAR-DE-EXTENSAO-UNIVERSITARIA)
+    from DADOS-COMPLEMENTARES/FORMACAO-COMPLEMENTAR.
+    Both types are normalised to the same record schema and sorted by end year.
+    """
+    sec = root.find(".//FORMACAO-COMPLEMENTAR")
+    if sec is None:
+        return []
+    items: list = []
+
+    for el in sec.findall("FORMACAO-COMPLEMENTAR-CURSO-DE-CURTA-DURACAO"):
+        items.append({
+            "kind"       : "Short Course",
+            "name"       : _attr(el, "NOME-CURSO-CURTA-DURACAO"),
+            "institution": _attr(el, "NOME-INSTITUICAO"),
+            "workload"   : _attr(el, "CARGA-HORARIA"),
+            "start"      : _attr(el, "ANO-DE-INICIO"),
+            "end"        : _attr(el, "ANO-DE-CONCLUSAO") or "In progress",
+            "status"     : _attr(el, "STATUS-DO-CURSO").replace("_", " ").capitalize(),
+        })
+
+    for el in sec.findall("FORMACAO-COMPLEMENTAR-DE-EXTENSAO-UNIVERSITARIA"):
+        items.append({
+            "kind"       : "University Extension",
+            "name"       : _attr(el, "NOME-CURSO-EXTENSAO-UNIVERSITARIA"),
+            "institution": _attr(el, "NOME-INSTITUICAO"),
+            "workload"   : _attr(el, "CARGA-HORARIA"),
+            "start"      : _attr(el, "ANO-DE-INICIO"),
+            "end"        : _attr(el, "ANO-DE-CONCLUSAO") or "In progress",
+            "status"     : _attr(el, "STATUS-DO-CURSO").replace("_", " ").capitalize(),
+        })
+
+    items.sort(key=lambda x: x["end"], reverse=True)
+    return items
+
+
+def extract_work_presentations(root: ET.Element) -> list:
+    """
+    Extracts APRESENTACAO-DE-TRABALHO elements nested inside
+    PARTICIPACAO-EM-CONGRESSO nodes (tag: PARTICIPACAO-EM-EVENTOS-CONGRESSOS).
+    DADOS-BASICOS-DA-APRESENTACAO-DE-TRABALHO and the optional
+    DETALHAMENTO-DA-APRESENTACAO-DE-TRABALHO sibling are both read.
+    Deduplication key: (title, year).
+    """
+    items: list = []
+    seen:  set  = set()
+
+    for ap in root.findall(".//APRESENTACAO-DE-TRABALHO"):
+        d   = ap.find("DADOS-BASICOS-DA-APRESENTACAO-DE-TRABALHO")
+        det = ap.find("DETALHAMENTO-DA-APRESENTACAO-DE-TRABALHO")
+        if d is None:
+            continue
+        title   = _attr(d, "TITULO")
+        year    = _attr(d, "ANO")
+        nature  = _attr(d, "NATUREZA").replace("_", " ").capitalize()
+        country = _attr(d, "PAIS-DO-EVENTO")
+        event   = _attr(det, "NOME-DO-EVENTO")  if det is not None else ""
+        city    = _attr(det, "CIDADE-DO-EVENTO") if det is not None else ""
+        key = (title, year)
+        if key in seen:
+            continue
+        seen.add(key)
+        items.append({
+            "title"  : title,
+            "year"   : year,
+            "nature" : nature,
+            "event"  : event,
+            "city"   : city,
+            "country": country,
+        })
+
+    items.sort(key=lambda x: x.get("year", ""), reverse=True)
+    return items
+
+
+def extract_additional_courses(root: ET.Element) -> list:
+    """
+    Searches the entire tree for INFORMACOES-ADICIONAIS-CURSO elements.
+    These discipline-level records appear inside formation elements
+    (GRADUACAO, MESTRADO, ESPECIALIZACAO, etc.) wrapped by
+    INFORMACOES-ADICIONAIS-CURSOS.
+    Deduplication key: (name, year, semester).
+    Sorted by (year desc, semester desc).
+    """
+    seen:  set  = set()
+    items: list = []
+
+    for el in root.findall(".//INFORMACOES-ADICIONAIS-CURSO"):
+        name     = _attr(el, "NOME-DISCIPLINA")
+        year     = _attr(el, "ANO")
+        semester = _attr(el, "SEMESTRE")
+        status   = _attr(el, "SITUACAO").replace("_", " ").capitalize()
+        wl_t     = _attr(el, "CARGA-HORARIA-TEORICA")
+        wl_p     = _attr(el, "CARGA-HORARIA-PRATICA")
+        workload = (
+            f"{wl_t}h theory / {wl_p}h practice" if (wl_t and wl_p)
+            else wl_t or wl_p
+        )
+        key = (name, year, semester)
+        if key in seen:
+            continue
+        seen.add(key)
+        items.append({
+            "name"    : name,
+            "year"    : year,
+            "semester": semester,
+            "status"  : status,
+            "workload": workload,
+        })
+
+    items.sort(
+        key=lambda x: (x.get("year", ""), x.get("semester", "")),
+        reverse=True,
+    )
+    return items
+
+
+def extract_additional_institutions(root: ET.Element) -> list:
+    """
+    Searches the entire tree for INFORMACOES-ADICIONAIS-INSTITUICAO elements.
+    These provide enriched institutional metadata associated with professional
+    activities (wrapped by INFORMACOES-ADICIONAIS-INSTITUICOES).
+    Deduplication key: (institution name, department/organ name).
+    """
+    seen:  set  = set()
+    items: list = []
+
+    for el in root.findall(".//INFORMACOES-ADICIONAIS-INSTITUICAO"):
+        name    = _attr(el, "NOME-INSTITUICAO")
+        country = _attr(el, "PAIS-INSTITUICAO")
+        state   = _attr(el, "UF-INSTITUICAO")
+        org     = _attr(el, "NOME-ORGAO")
+        if not name:
+            continue
+        key = (name, org)
+        if key in seen:
+            continue
+        seen.add(key)
+        items.append({
+            "institution": name,
+            "country"    : country,
+            "state"      : state,
+            "department" : org,
+        })
+
+    return items
+
+
 # ---------------------------------------------------------------------------
 # 6. Data extraction pipeline
 # ---------------------------------------------------------------------------
 
 _PIPELINE = [
-    ("Personal data",           extract_personal),
-    ("Academic background",     extract_education),
-    ("Professional experience", extract_experience),
-    ("Internships",             extract_internships),
-    ("Research activities",     extract_research),
-    ("Publications",            extract_publications),
-    ("Areas of expertise",      extract_areas),
-    ("Languages",               extract_languages),
-    ("Awards",                  extract_awards),
-    ("Events",                  extract_events),
+    ("Personal data",              extract_personal),
+    ("Academic background",        extract_education),
+    ("Professional experience",    extract_experience),
+    ("Internships",                extract_internships),
+    ("Research activities",        extract_research),
+    ("Publications",               extract_publications),
+    ("Areas of expertise",         extract_areas),
+    ("Languages",                  extract_languages),
+    ("Awards",                     extract_awards),
+    ("Events",                     extract_events),
+    ("Complementary formation",    extract_complementary_formation),
+    ("Work presentations",         extract_work_presentations),
+    ("Additional courses",         extract_additional_courses),
+    ("Additional institutions",    extract_additional_institutions),
 ]
 
 
@@ -772,10 +926,77 @@ def _make_builders(ST: dict, font_body: str, font_bold: str):
         story.append(_sp())
         return story
 
+    def build_complementary_formation(items: list) -> list:
+        if not items:
+            return []
+        story = _section_header("Complementary Formation")
+        for it in items:
+            label = f"{it['kind']}: {it['name']}" if it.get("kind") else it.get("name", "")
+            story.append(_pm(f"<b>{_safe(label)}</b>", "body"))
+            parts: list = []
+            if it.get("institution"): parts.append(it["institution"])
+            period = f"{it['start']} - {it['end']}" if it.get("start") else it.get("end", "")
+            if period:               parts.append(period)
+            if it.get("status"):     parts.append(it["status"])
+            if it.get("workload"):   parts.append(f"{it['workload']} h")
+            if parts:
+                story.append(_p("  |  ".join(parts), "small"))
+            story.append(_sp(0.2))
+        return story
+
+    def build_work_presentations(items: list) -> list:
+        if not items:
+            return []
+        story = _section_header("Work Presentations")
+        for it in items:
+            line_text = f"[{it.get('year', '?')}] {it.get('title', '')}"
+            if it.get("nature"):  line_text += f"  ({it['nature']})"
+            if it.get("event"):   line_text += f"  -  {it['event']}"
+            if it.get("city"):    line_text += f", {it['city']}"
+            if it.get("country"): line_text += f"  ({it['country']})"
+            story.append(_b(line_text))
+        story.append(_sp())
+        return story
+
+    def build_additional_courses(items: list) -> list:
+        if not items:
+            return []
+        story = _section_header("Coursework Details")
+        for it in items:
+            story.append(_pm(f"<b>{_safe(it.get('name', ''))}</b>", "body"))
+            parts: list = []
+            period_str = it.get("year", "")
+            if period_str and it.get("semester"):
+                period_str += f" / Semester {it['semester']}"
+            if period_str:           parts.append(period_str)
+            if it.get("status"):     parts.append(it["status"])
+            if it.get("workload"):   parts.append(it["workload"])
+            if parts:
+                story.append(_p("  |  ".join(parts), "small"))
+            story.append(_sp(0.15))
+        return story
+
+    def build_additional_institutions(items: list) -> list:
+        if not items:
+            return []
+        story = _section_header("Institutional References")
+        for it in items:
+            story.append(_pm(f"<b>{_safe(it.get('institution', ''))}</b>", "body"))
+            parts: list = []
+            if it.get("department"): parts.append(it["department"])
+            if it.get("state"):      parts.append(it["state"])
+            if it.get("country"):    parts.append(it["country"])
+            if parts:
+                story.append(_p("  |  ".join(parts), "small"))
+            story.append(_sp(0.15))
+        return story
+
     return (
         build_header, build_summary, build_education, build_experience,
         build_internships, build_research, build_publications,
         build_areas, build_languages, build_awards, build_events,
+        build_complementary_formation, build_work_presentations,
+        build_additional_courses, build_additional_institutions,
     )
 
 
@@ -796,21 +1017,27 @@ def generate_pdf(
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.units     import cm
 
-    personal     = data["Personal data"]
-    education    = data["Academic background"]
-    experience   = data["Professional experience"]
-    internships  = data["Internships"]
-    research     = data["Research activities"]
-    publications = data["Publications"]
-    areas        = data["Areas of expertise"]
-    languages    = data["Languages"]
-    awards       = data["Awards"]
-    events       = data["Events"]
+    personal               = data["Personal data"]
+    education              = data["Academic background"]
+    experience             = data["Professional experience"]
+    internships            = data["Internships"]
+    research               = data["Research activities"]
+    publications           = data["Publications"]
+    areas                  = data["Areas of expertise"]
+    languages              = data["Languages"]
+    awards                 = data["Awards"]
+    events                 = data["Events"]
+    complementary          = data["Complementary formation"]
+    work_presentations     = data["Work presentations"]
+    additional_courses     = data["Additional courses"]
+    additional_institutions = data["Additional institutions"]
 
     (
         build_header, build_summary, build_education, build_experience,
         build_internships, build_research, build_publications,
         build_areas, build_languages, build_awards, build_events,
+        build_complementary_formation, build_work_presentations,
+        build_additional_courses, build_additional_institutions,
     ) = _make_builders(ST, font_body, font_bold)
 
     doc = SimpleDocTemplate(
@@ -828,12 +1055,16 @@ def generate_pdf(
     story += build_summary(personal)
     story += build_areas(areas)
     story += build_education(education)
+    story += build_complementary_formation(complementary)
     story += build_experience(experience)
     story += build_internships(internships)
     story += build_research(research)
+    story += build_work_presentations(work_presentations)
     story += build_publications(publications)
     story += build_awards(awards)
     story += build_events(events)
+    story += build_additional_courses(additional_courses)
+    story += build_additional_institutions(additional_institutions)
     story += build_languages(languages)
 
     doc.build(story)

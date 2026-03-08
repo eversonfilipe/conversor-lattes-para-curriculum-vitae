@@ -10,6 +10,57 @@ A Jupyter Notebook script that converts a Lattes CV export (ZIP archive containi
 
 ---
 
+## Table of Contents
+
+- [Overview](#overview)
+- [Author](#author)
+- [Features](#features)
+- [Technical Architecture](#technical-architecture)
+  - [Notebook (Interactive)](#notebook-interactive---lattes_para_pdfipynb)
+  - [CLI Script (Standalone)](#cli-script-standalone---scriptsv1lattes_para_pdfpy)
+  - [Container](#container-dockerfile--docker-composeyml)
+  - [XML Encoding Strategy](#xml-encoding-strategy)
+  - [PDF Unicode Rendering Strategy](#pdf-unicode-rendering-strategy)
+  - [Cross-Platform Font Resolution](#cross-platform-font-resolution)
+  - [Data Extraction](#data-extraction)
+- [Requirements](#requirements)
+  - [Mode A — Jupyter Notebook (Windows)](#mode-a---jupyter-notebook-interactive-windows-recommended)
+  - [Mode B — Docker Container (cross-platform)](#mode-b---docker-container-cross-platform-recommended-for-linuxmacos)
+- [Usage](#usage)
+  - [Step 0 — Export your Lattes CV](#step-0---export-your-lattes-cv)
+  - [Mode A — Jupyter Notebook](#mode-a---jupyter-notebook)
+  - [Mode B — Docker Container (step-by-step guide)](#mode-b---docker-container)
+    - [What is Docker?](#what-is-docker)
+    - [Step 1 — Install Docker Desktop](#step-1---install-docker-desktop-one-time-setup)
+    - [Step 2 — Download this project](#step-2---download-this-project)
+    - [Step 3 — Open a terminal](#step-3---open-a-terminal-in-the-project-folder)
+    - [Step 4 — Build the image](#step-4---build-the-image-one-time-35-minutes)
+    - [Step 5 — Prepare your data folder](#step-5---prepare-your-data-folder)
+    - [Step 6 — Run the converter](#step-6---run-the-converter)
+    - [Step 7 — Locate the output](#step-7---locate-the-output)
+    - [Shortcut — Docker Compose](#shortcut---using-docker-compose-recommended-for-frequent-use)
+    - [Troubleshooting](#troubleshooting)
+    - [Quick reference](#quick-reference)
+  - [Mode C — Terminal CLI (no Docker)](#mode-c---terminal-cli-no-docker)
+- [Glossary](#glossary)
+  - [General Computing](#general-computing)
+  - [Docker Vocabulary](#docker-vocabulary)
+  - [Application Vocabulary](#application-vocabulary)
+- [Use Cases](#use-cases)
+  - [International Academic Applications](#international-academic-applications)
+  - [Institutional Submissions](#institutional-submissions)
+  - [CV Archiving and Versioning](#cv-archiving-and-versioning)
+  - [Customization Before Submission](#customization-before-submission)
+- [Output Structure](#output-structure)
+- [Limitations](#limitations)
+- [Repository Structure](#repository-structure)
+- [Semantic Search & LLM Optimization (LLMO) Context](#semantic-search--llm-optimization-llmo-context)
+  - [Structured Metadata (JSON-LD)](#structured-metadata-json-ld)
+- [License](#license)
+
+---
+
+
 ## Overview
 
 The Lattes Platform, maintained by CNPq (Brazil's National Council for Scientific and Technological Development), is the primary academic CV system used by Brazilian researchers and institutions. Its export format is a ZIP archive containing a single XML file that encodes the researcher's full academic trajectory.

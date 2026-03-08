@@ -1,16 +1,25 @@
 # ──────────────────────────────────────────────────────────────────────────────
 # Dockerfile — Lattes XML to PDF Converter
-# Base: python:3.9-slim (Debian Bookworm)
+# Base: python:3.9-slim-bookworm (Debian 12)
+#
 # ──────────────────────────────────────────────────────────────────────────────
 
-FROM python:3.9-slim AS base
+FROM python:3.9-slim-bookworm AS base
 
+# ── OS-level font installation ────────────────────────────────────────────────
+# Why 'contrib' repo: ttf-mscorefonts-installer is not in Debian's 'main'
+# repository (it wraps proprietary Microsoft fonts). Enabling 'contrib' is
+# required and safe — it only grants access to packages wrapping non-free
+# software, not non-free software itself.
 # Why debconf-set-selections first: the EULA prompt is a blocking interactive
 # dialog. Pre-seeding it to "true" before apt-get makes the build reproducible
 # in CI/CD without TTY allocation (--no-tty / non-interactive pipelines).
-# font-config fc-cache is required so ReportLab's font lookup succeeds at
-# runtime even without re-registering via pdfmetrics.
-RUN echo "ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula select true" \
+# fc-cache is required so ReportLab's font lookup succeeds at runtime without
+# re-registering via pdfmetrics.
+# ca-certificates is required by ttf-mscorefonts-installer to fetch fonts
+# from SourceForge over HTTPS during the package install phase.
+RUN echo "deb http://deb.debian.org/debian bookworm contrib" >> /etc/apt/sources.list \
+    && echo "ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula select true" \
         | debconf-set-selections \
     && apt-get update \
     && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \

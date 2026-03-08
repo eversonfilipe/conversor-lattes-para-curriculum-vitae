@@ -381,6 +381,70 @@ python scripts/v1/lattes_para_pdf.py CV_YOURID.zip --output /path/to/output.pdf
 
 ---
 
+## Glossary
+
+> This section defines every technical term you will encounter when using this application. If a word in the instructions is unfamiliar, find it here first.
+
+---
+
+### General Computing
+
+| Term | What it means |
+|---|---|
+| **Terminal** | A text-based window where you type commands to control your computer. On Windows it is called **PowerShell** or **Command Prompt**; on macOS and Linux it is called **Terminal**. |
+| **Command** | A text instruction you type in the terminal and confirm by pressing `Enter`. |
+| **Path** | The address of a file or folder on your computer. Example: `C:\Users\you\data\CV.zip`. |
+| **Directory** | Another word for "folder". |
+| **Current directory** | The folder your terminal is "looking at" right now. Shown at the start of each terminal line (e.g., `PS C:\project>`). |
+| **ZIP file** | A compressed archive that bundles one or more files into a single package. The Lattes platform exports your CV as a `.zip` file. |
+| **XML** | A structured text format used by the Lattes platform to store all your CV data. You never edit this file manually — the script reads it automatically. |
+| **PDF** | The final output format of this tool. A PDF is a fixed-layout document that looks identical on every device and printer. |
+| **Flag / Argument** | Extra instructions added to a command. They typically start with `--`. Example: `--skip-deps` tells the script to skip a specific step. |
+| **Environment variable** | A named setting the operating system passes to a program at startup. Example: `FONT_DIR=/path/to/fonts` tells the script where to find font files. |
+
+---
+
+### Docker Vocabulary
+
+| Term | What it means |
+|---|---|
+| **Docker** | A free tool that packages applications and all their dependencies into portable, isolated units called **containers**. |
+| **Image** | A pre-built, read-only snapshot of the application, its libraries, fonts, and operating system base. Think of it as the "template" stored on disk. Created by `docker build`. |
+| **Container** | A live, running instance of an image. Think of it as the program actually executing. When it stops, the container is discarded (especially with `--rm`). |
+| **`docker build`** | The command that reads the `Dockerfile` and assembles the image. Runs once; subsequent runs are fast because intermediary steps are cached. |
+| **`docker run`** | The command that starts a container from an existing image and executes the application. |
+| **`Dockerfile`** | A plain-text script of sequential instructions that describes how to build the image (base OS, packages to install, files to copy, etc.). |
+| **`docker-compose.yml`** | A configuration file that stores a pre-configured `docker run` command, so you can type `docker compose run` instead of the full multi-line command. |
+| **Volume (`-v`)** | A bridge between a folder on your computer and a folder inside the container. Syntax: `-v "local_path:container_path"`. This is how the container reads your ZIP and writes the PDF back to your machine. |
+| **Working directory (`-w`)** | Sets the "current folder" inside the container when the command runs. If `-w /app/data` is set, the script will auto-detect ZIP files placed in that folder. |
+| **`--rm`** | A flag for `docker run`. Tells Docker to automatically delete the container once it finishes, preventing accumulation of stopped containers. |
+| **`--skip-deps`** | A custom flag of this application. Tells the script not to re-run `pip install`, because all Python packages were already installed during `docker build`. |
+| **Docker Desktop** | The graphical application that installs and manages Docker on Windows and macOS. It must be open and running before any `docker` command is executed. |
+| **Daemon** | The background service that Docker Desktop runs. Commands like `docker build` communicate with this daemon. If you see "Cannot connect to the Docker daemon", Docker Desktop is not open. |
+| **Layer / Cache** | Docker saves each build step as a reusable layer. If only the script files change, `docker build` reuses the cached font-installation layer, making rebuilds fast (seconds instead of minutes). |
+
+---
+
+### Application Vocabulary
+
+| Term | What it means |
+|---|---|
+| **Lattes Platform** | CNPq's (Brazil's National Council for Scientific and Technological Development) official academic CV system. Used by Brazilian researchers and required by most Brazilian universities and funding agencies. |
+| **ZIP export** | The archive downloaded from [lattes.cnpq.br](https://lattes.cnpq.br) when you click "Export CV". Contains a single XML file with all your academic data. |
+| **`CV_YOURID.zip`** | Convention for the exported ZIP filename. `YOURID` is your numeric Lattes identifier (e.g., `CV_6518327334232126.zip`). |
+| **Pipeline** | The ordered sequence of processing steps the script executes: XML parsing → data extraction for each of 14 sections → PDF layout → file output. |
+| **Extraction** | The process of reading fields from the XML and converting them into structured records the PDF builder can use. One pure Python function per section. |
+| **Deduplication** | Automatic removal of repeated records. For example, if the same professional experience appears twice in the XML (a known Lattes export quirk), only one entry will appear in the PDF. |
+| **TTF / TrueType Font** | A font file format (`.ttf`). The container installs **Times New Roman** TTF files from Microsoft's open distribution so that the PDF renders accented characters (ã, ç, é, etc.) correctly on Linux. |
+| **Unicode** | A universal standard for representing characters from all languages. This application uses UTF-8 encoding (a Unicode implementation) throughout the entire pipeline. |
+| **ISO-8859-1** | An older character encoding that the Lattes platform declares in its XML files. The script detects this declaration automatically and decodes the file correctly before any processing begins. |
+| **`FONT_DIR`** | An environment variable that tells `_register_fonts()` where the Times New Roman TTF files are located. Set to `/usr/share/fonts/truetype/msttcorefonts` inside the Docker image. |
+| **`--help`** | A standard flag accepted by the CLI script. Prints a summary of all available arguments and exits. Run `docker run --rm lattes-converter --help` to see it. |
+| **`_cv.pdf` suffix** | Naming convention for the output file. The script appends `_cv` to the original ZIP stem: `CV_ID.zip` → `CV_ID_cv.pdf`. |
+| **`data/` folder** | The only folder on your computer that the Docker container can access. Place the ZIP here before running; the PDF will appear here after. This isolation guarantees that no other files on your machine are exposed to the container. |
+
+---
+
 ## Use Cases
 
 ### International Academic Applications

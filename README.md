@@ -180,39 +180,193 @@ CV_YOURID_cv.pdf
 
 ### Mode B — Docker Container
 
-**1. Build the image** (first time only, ~3–5 min — downloads MS fonts):
+> **Who is this for?** Anyone on Windows, Linux, or macOS who does not want to install Python, configure environments, or manage dependencies manually. Docker packages the entire application — including fonts — into a self-contained unit that runs identically on any machine.
+
+#### What is Docker?
+
+Docker is a free tool that runs applications inside isolated "containers". Think of it as a USB stick that carries the entire program pre-installed. When you run a container, it uses exactly the software it was built with, unaffected by your machine's configuration.
+
+---
+
+#### Step 1 — Install Docker Desktop (one-time setup)
+
+Download and install Docker Desktop for your operating system:
+
+| OS | Download link |
+|---|---|
+| Windows | [docs.docker.com/desktop/install/windows-install](https://docs.docker.com/desktop/install/windows-install/) |
+| macOS | [docs.docker.com/desktop/install/mac-install](https://docs.docker.com/desktop/install/mac-install/) |
+| Linux | [docs.docker.com/desktop/install/linux](https://docs.docker.com/desktop/install/linux/) |
+
+After installation, **open Docker Desktop** and wait for the whale icon 🐳 in the taskbar to stop animating. That means Docker is ready.
+
+To confirm Docker is working, open a terminal and run:
 
 ```bash
+docker --version
+```
+
+You should see something like `Docker version 27.x.x`. If you do, Docker is ready.
+
+---
+
+#### Step 2 — Download this project
+
+If you haven't already, download this repository. Click the green **Code** button on GitHub and choose **Download ZIP**, then extract it to a folder you can find easily (for example, `Documents/lattes-converter/`).
+
+> Alternatively, if you have Git installed: `git clone https://github.com/eversonfilipe/conversor-lattes-para-curriculum-vitae.git`
+
+---
+
+#### Step 3 — Open a terminal in the project folder
+
+**Windows:** open the project folder in File Explorer, click the address bar, type `powershell`, and press Enter.
+
+**macOS / Linux:** open Terminal and navigate to the project folder:
+
+```bash
+cd ~/Documents/lattes-converter
+```
+
+---
+
+#### Step 4 — Build the image (one-time, ~3–5 minutes)
+
+This command downloads the base environment and installs all dependencies, including the Times New Roman fonts. It only needs to run once. Subsequent uses start in seconds.
+
+```powershell
+# Windows PowerShell
 docker build -t lattes-converter .
 ```
 
-**2. Create the data folder and copy your ZIP**:
+```bash
+# macOS / Linux
+docker build -t lattes-converter .
+```
+
+> The `.` at the end is mandatory — it tells Docker to look for the `Dockerfile` in the current directory. Wait until you see `naming to docker.io/library/lattes-converter:latest done`.
+
+---
+
+#### Step 5 — Prepare your data folder
+
+Create a folder called `data` inside the project and place your Lattes ZIP file there.
+
+```powershell
+# Windows PowerShell
+mkdir data
+Copy-Item CV_YOURID.zip .\data\
+```
 
 ```bash
+# macOS / Linux
 mkdir data
 cp CV_YOURID.zip data/
 ```
 
-**3. Run the converter**:
+Replace `CV_YOURID.zip` with the actual name of the file downloaded from [lattes.cnpq.br](https://lattes.cnpq.br). The file is usually named `CV_<your numeric ID>.zip`.
+
+Your folder structure should look like this:
+
+```
+lattes-converter/
+├── data/
+│   └── CV_6518327334232126.zip   ← your file goes here
+├── Dockerfile
+├── docker-compose.yml
+└── scripts/
+```
+
+---
+
+#### Step 6 — Run the converter
+
+```powershell
+# Windows PowerShell — replace the filename with your actual ZIP name
+docker run --rm `
+  -v "${PWD}\data:/app/data" `
+  -w /app/data `
+  lattes-converter CV_YOURID.zip --skip-deps
+```
 
 ```bash
-# Linux / macOS
-docker run --rm -v "$(pwd)/data:/app/data" -w /app/data lattes-converter CV_YOURID.zip --skip-deps
+# macOS / Linux — replace the filename with your actual ZIP name
+docker run --rm \
+  -v "$(pwd)/data:/app/data" \
+  -w /app/data \
+  lattes-converter CV_YOURID.zip --skip-deps
+```
 
-# Windows PowerShell
-docker run --rm -v "${PWD}\data:/app/data" -w /app/data lattes-converter CV_YOURID.zip --skip-deps
+**What each part means:**
 
-# Or via Compose (volume and flags pre-configured)
+| Flag | Purpose |
+|---|---|
+| `--rm` | Automatically remove the container when it finishes (keeps your machine clean) |
+| `-v "${PWD}\data:/app/data"` | Connect your local `data/` folder to the container so it can read the ZIP and write the PDF |
+| `-w /app/data` | Tell the container to look for the ZIP in the connected folder |
+| `CV_YOURID.zip` | The name of your ZIP file — replace this |
+| `--skip-deps` | Skip the pip install step (dependencies are already in the image) |
+
+---
+
+#### Step 7 — Locate the output
+
+When the command finishes, your PDF will appear in the `data/` folder:
+
+```
+data/
+├── CV_YOURID.zip           ← your original export (unchanged)
+└── CV_YOURID_cv.pdf        ← your generated CV ✓
+```
+
+Open it with any PDF reader.
+
+> **Privacy guarantee:** your ZIP file and the generated PDF exist only inside the `data/` folder on your computer. They never enter the Docker image. If you delete the `data/` folder, all personal data is gone.
+
+---
+
+#### Shortcut — Using Docker Compose (recommended for frequent use)
+
+If you use the converter regularly, Docker Compose simplifies the command:
+
+```bash
 docker compose run --rm lattes-converter CV_YOURID.zip
 ```
 
-**4. Locate the output** — the PDF appears in `./data/`:
+The `docker-compose.yml` file already configures the volume mount and `--skip-deps` automatically.
 
-```
-data/CV_YOURID_cv.pdf
-```
+---
 
-> **Privacy guarantee:** your ZIP file and generated PDF never enter the Docker image layers. The `./data/` directory is exclusively a host-side volume mount.
+#### Troubleshooting
+
+| Symptom | Cause | Solution |
+|---|---|---|
+| `Cannot connect to the Docker daemon` | Docker Desktop is not running | Open Docker Desktop and wait for the whale icon to stop animating |
+| `docker build` requires 1 argument | Missing `.` at the end of the command | Run `docker build -t lattes-converter .` (note the dot) |
+| `No such file or directory` for ZIP | ZIP is not inside `data/` | Confirm the file is in the `data/` subfolder, not the root |
+| PDF not generated, error about font | Font directory not found | The image resolves fonts automatically via `FONT_DIR`; rebuild with `docker build -t lattes-converter .` |
+| Container exits immediately | Wrong ZIP filename | Double-check the exact filename including `.zip` extension |
+
+---
+
+#### Quick reference
+
+```powershell
+# Build the image (one-time)
+docker build -t lattes-converter .
+
+# Convert (Windows PowerShell)
+docker run --rm -v "${PWD}\data:/app/data" -w /app/data lattes-converter CV_YOURID.zip --skip-deps
+
+# Convert (macOS / Linux)
+docker run --rm -v "$(pwd)/data:/app/data" -w /app/data lattes-converter CV_YOURID.zip --skip-deps
+
+# Simplified via Compose
+docker compose run --rm lattes-converter CV_YOURID.zip
+
+# See all options
+docker run --rm lattes-converter --help
+```
 
 ---
 

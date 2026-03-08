@@ -70,7 +70,10 @@ VOLUME ["/app/data"]
 
 # ── Entrypoint ────────────────────────────────────────────────────────────────
 # ENTRYPOINT fixes the executable; CMD provides the default argument.
-# Override CMD at `docker run` time to pass a custom ZIP name:
+# Why absolute path: using a relative path combined with -w /app/data at
+# runtime would cause Python to search for the script inside /app/data/,
+# where it does not exist. The absolute path resolves correctly regardless
+# of the working directory set by the caller.
 #   docker run ... lattes-converter CV_MYID.zip
-ENTRYPOINT ["python", "scripts/v1/lattes_para_pdf.py"]
+ENTRYPOINT ["python", "/app/scripts/v1/lattes_para_pdf.py"]
 CMD ["--help"]
